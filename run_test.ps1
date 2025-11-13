@@ -26,7 +26,7 @@ else {
 }
 
 # Check test data
-if (Test-Path ".\大模型实习项目测试.csv") {
+if (Test-Path "D:\ms_project\大模型实习项目测试.csv") {
     Write-Host "[OK] Found test data file" -ForegroundColor Green
 }
 else {

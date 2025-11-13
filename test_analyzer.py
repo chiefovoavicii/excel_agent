@@ -2,7 +2,7 @@
 测试脚本 - 运行三个关联问题
 """
 
-from enhanced_datahelper import DataAnalyzer
+from data_analyzer import DataAnalyzer
 
 
 def main():

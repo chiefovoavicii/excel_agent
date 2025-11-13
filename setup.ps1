@@ -79,7 +79,7 @@ Write-Host ""
 
 # Step 5: Check test data
 Write-Host "Step 5/5: Checking test data..." -ForegroundColor Yellow
-if (Test-Path ".\大模型实习项目测试.csv") {
+if (Test-Path "D:\ms_project\大模型实习项目测试.csv") {
     Write-Host "[OK] Test data file found" -ForegroundColor Green
 }
 else {

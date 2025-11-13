@@ -1,99 +1,270 @@
+"""
+增强版数据分析应用
+支持对话历史、代码生成、错误纠正和自然语言解释
+"""
+
 import streamlit as st
+import pandas as pd
+from data_analyzer import DataAnalyzer
 
-import datahelper
+# 页面配置
+st.set_page_config(page_title="智能数据分析助手 🤖", layout="wide")
 
-if "dataload" not in st.session_state:
-    st.session_state.dataload = False
-
-
-def activate_dataload():
-    st.session_state.dataload = True
-
-
-st.set_page_config(page_title="Data Analyzer 🤖", layout="wide")
-st.image("./image/banner2.png", width='stretch')
-st.title("🤖 LLM Agent Data analyzer ")
+# 标题
+st.title("🤖 智能数据分析助手 (增强版)")
+st.markdown("支持对话历史、自动代码生成、错误纠正和自然语言解释")
 st.divider()
 
+# 初始化session state
+if "analyzer" not in st.session_state:
+    st.session_state.analyzer = None
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "data_loaded" not in st.session_state:
+    st.session_state.data_loaded = False
 
-# Sidebar
-st.sidebar.subheader("Load your data")
-st.sidebar.divider()
+# 侧边栏 - 数据加载
+with st.sidebar:
+    st.header("📁 数据加载")
+    st.divider()
+    
+    # 选择数据源
+    data_source = st.radio(
+        "选择数据源:",
+        ["上传文件", "指定路径"]
+    )
+    
+    csv_path = None
+    
+    if data_source == "上传文件":
+        uploaded_file = st.file_uploader("上传CSV文件", type="csv")
+        if uploaded_file:
+            csv_path = uploaded_file
+    else:
+        csv_path_input = st.text_input(
+            "CSV文件路径:",
+            value=r"d:\ms_project\data_analyzer_app_with_llm_agents-main\大模型实习项目测试.csv"
+        )
+        if csv_path_input:
+            csv_path = csv_path_input
+    
+    # LLM选择
+    st.divider()
+    st.header("🤖 LLM设置")
+    llm_provider = st.selectbox(
+        "选择LLM:",
+        ["gemini", "gpt", "claude", "deepseek", "qwen3"],
+        index=0
+    )
 
-loaded_file = st.sidebar.file_uploader("Chose your csv data", type="csv")
-load_data_btn = st.sidebar.button(
-    label="Load", on_click=activate_dataload, use_container_width=True
-)
-
-# Main
-
-col_prework, col_dummy, col_interaction = st.columns([4, 1, 7])
-
-if st.session_state.dataload:
-
-    @st.cache_data
-    def summerize():
-        loaded_file.seek(0)
-        data_summary = datahelper.summerize_csv(filename=loaded_file)
-        return data_summary
-
-    data_summary = summerize()
-
-    with col_prework:
-        st.info("Data summary")
-        st.subheader("Sample of Data")
-        st.write(data_summary["initial_data_sample"])
+    # 如果已经初始化 analyzer 且当前 provider 与选择不同，提示用户重新初始化
+    if st.session_state.get("analyzer") is not None:
+        current_active = getattr(st.session_state.analyzer, "current_provider", "unknown")
+        if current_active != llm_provider:
+            st.info(f"当前会话实际使用的模型: {current_active}，侧边栏已选择: {llm_provider}。点击下方按钮重新初始化以切换。")
+            if st.button("🔁 仅切换模型(保留已加载数据)", key="switch_llm_btn", help="不重新读CSV，直接替换模型"):
+                try:
+                    # 直接替换 llm 与 current_provider
+                    st.session_state.analyzer.llm = st.session_state.analyzer._init_llm(llm_provider)
+                    st.success(f"模型已切换为: {llm_provider}")
+                except Exception as e:
+                    st.error(f"模型切换失败: {e}")
+    
+    # 加载数据按钮
+    if st.button("🚀 加载数据", width='stretch'):
+        if csv_path:
+            try:
+                with st.spinner("正在加载数据..."):
+                    st.session_state.analyzer = DataAnalyzer(
+                        csv_path=csv_path,
+                        llm_provider=llm_provider
+                    )
+                    st.session_state.data_loaded = True
+                    st.session_state.chat_history = []
+                st.success("✓ 数据加载成功!")
+            except Exception as e:
+                st.error(f"❌ 加载失败: {str(e)}")
+        else:
+            st.warning("⚠ 请先选择或输入CSV文件路径")
+    
+    # 清空历史按钮
+    if st.session_state.data_loaded:
         st.divider()
-        st.subheader("Features of Data")
-        st.write(data_summary["column_descriptions"])
+    if st.button("🗑️ 清空对话历史", width='stretch'):
+            st.session_state.chat_history = []
+            if st.session_state.analyzer:
+                st.session_state.analyzer.clear_history()
+            st.rerun()
+
+# 主界面
+if st.session_state.data_loaded and st.session_state.analyzer:
+    analyzer = st.session_state.analyzer
+    
+    # 创建两列布局
+    col_data, col_chat = st.columns([1, 2])
+    
+    # 左侧 - 数据概览
+    with col_data:
+        st.header("📊 数据概览")
+        
+        with st.expander("数据集信息", expanded=True):
+            df = analyzer.df
+            st.write(f"**行数:** {len(df)}")
+            st.write(f"**列数:** {len(df.columns)}")
+            st.write(f"**列名:** {', '.join(df.columns.tolist())}")
+        
+        with st.expander("前10行数据"):
+            st.dataframe(df.head(10), width='stretch')
+        
+        with st.expander("数据统计"):
+            st.dataframe(df.describe(), width='stretch')
+        
+        with st.expander("数据类型"):
+            dtype_df = pd.DataFrame({
+                '列名': df.columns,
+                '数据类型': df.dtypes.values
+            })
+            # 避免 Arrow 转换错误: 将 dtype 对象转为字符串
+            if '数据类型' in dtype_df.columns:
+                dtype_df['数据类型'] = dtype_df['数据类型'].astype(str)
+            st.dataframe(dtype_df, width='stretch')
+    
+    # 右侧 - 对话界面
+    with col_chat:
+        st.header("💬 智能对话分析")
+        
+        # 显示对话历史
+        chat_container = st.container()
+        with chat_container:
+            for i, chat in enumerate(st.session_state.chat_history):
+                # 用户问题
+                with st.chat_message("user"):
+                    st.write(chat["question"])
+                
+                # AI回答
+                with st.chat_message("assistant"):
+                    if chat.get("success", False):
+                        st.success("✓ 分析完成")
+                        
+                        # 显示生成的代码
+                        with st.expander("📝 生成的代码", expanded=False):
+                            st.code(chat["code"], language="python")
+                        
+                        # 显示执行结果
+                        with st.expander("📊 执行结果", expanded=True):
+                            st.text(chat["execution_result"])
+                        
+                        # 显示自然语言解释
+                        st.markdown("**💡 分析解释:**")
+                        st.info(chat["explanation"])
+                        
+                        if chat.get("retry_count", 0) > 0:
+                            st.caption(f"ℹ️ 经过 {chat['retry_count'] + 1} 次尝试后成功")
+                    else:
+                        st.error("❌ 分析失败")
+                        explanation_text = chat.get("explanation", "未知错误")
+                        st.error(explanation_text)
+                        # 如果是余额/配额不足错误,给出引导
+                        if any(k in explanation_text for k in ["余额", "402", "quota", "配额"]):
+                            st.warning(
+                                "检测到当前模型可能余额或配额不足。您可以在侧边栏更换其它可用的 LLM 提供商后重新尝试。\n"
+                                "已设置的密钥将自动生效。若仍失败，请检查对应平台账户状态。"
+                            )
+                        if chat.get("code"):
+                            with st.expander("尝试的代码"):
+                                st.code(chat["code"], language="python")
+        
+        # 输入框
         st.divider()
-        st.subheader("Missing values of Data")
-        st.write(data_summary["missing_values"])
-        st.divider()
-        st.subheader("Dupplicate values of Data")
-        st.write(data_summary["dupplicate_values"])
-        st.divider()
-        st.subheader("Summary Statistics of Data")
-        st.write(data_summary["essential_metrics"])
+        
+        # 用户输入
+        user_question = st.text_area(
+            "输入您的数据分析问题:",
+            height=100,
+            placeholder="例如: 分析Clothing随时间变化的总销售额趋势"
+        )
+        
+        # 提交按钮
+        col_submit, col_clear = st.columns([3, 1])
+        with col_submit:
+            submit_btn = st.button("🔍 分析", width='stretch', type="primary")
+        with col_clear:
+            clear_btn = st.button("🗑️ 清空", width='stretch')
+        
+        if clear_btn:
+            st.session_state.chat_history = []
+            analyzer.clear_history()
+            st.rerun()
+        
+        # 处理用户问题
+        if submit_btn and user_question.strip():
+            with st.spinner("🤔 正在分析..."):
+                try:
+                    # 生成代码并执行
+                    result = analyzer.generate_code(user_question)
+                except Exception as e:
+                    # 捕获未处理的异常，避免页面无输出
+                    import traceback
+                    err_text = f"LLM调用或代码生成过程中发生异常: {e}\n{traceback.format_exc()[:800]}"
+                    result = {
+                        "question": user_question,
+                        "success": False,
+                        "code": "",
+                        "execution_result": "",
+                        "explanation": err_text,
+                        "error": str(e),
+                        "retry_count": 0
+                    }
+                # 若生成的代码为空但没有显式错误，做保护性处理
+                if result.get("success") and not result.get("code", "").strip():
+                    result["success"] = False
+                    result["explanation"] = "生成成功标记出现但代码为空，已标记为失败。请重试或缩短问题。"
+                # 附加调试信息（仅在失败且 explanation 中无余额关键词时显示简短来源）
+                if not result.get("success") and "current_provider" in getattr(analyzer, '__dict__', {}):
+                    provider = getattr(analyzer, 'current_provider', 'unknown')
+                    if "LLM调用失败" in result.get("explanation", "") and "provider=" not in result["explanation"]:
+                        result["explanation"] += f"\n(provider={provider})"
+                # 添加到聊天历史
+                st.session_state.chat_history.append(result)
+                # 刷新页面
+                st.rerun()
 
-    with col_dummy:
-        st.empty()
+else:
+    # 未加载数据时的提示
+    st.info("👈 请先在左侧加载CSV数据文件")
+    
+    # 显示使用说明
+    st.markdown("""
+    ## 📖 使用说明
+    
+    ### 功能特性:
+    1. **灵活的数据加载**: 支持上传文件或指定文件路径
+    2. **智能代码生成**: 使用大模型自动生成Python分析代码
+    3. **自动错误纠正**: 代码执行失败时自动重试并纠错
+    4. **对话历史管理**: 支持基于历史上下文的连续对话
+    5. **自然语言解释**: 将分析结果转换为易懂的自然语言
+    6. **多LLM支持**: 可选择Gemini、GPT、Claude、DeepSeek、Qwen3
+    
+    ### 使用步骤:
+    1. 在左侧选择数据源(上传文件或指定路径)
+    2. 选择要使用的LLM模型
+    3. 点击"加载数据"按钮
+    4. 在右侧输入您的数据分析问题
+    5. 查看生成的代码、执行结果和自然语言解释
+    
+    ### 示例问题:
+    - 分析Clothing随时间变化的总销售额趋势
+    - 对Bikes进行同样的分析
+    - 哪些年份Components比Accessories的总销售额高?
+    - 找出销售额最高的产品类别
+    - 分析评分和销售额之间的关系
+    
+    ### 注意事项:
+    - 确保已设置相应的API密钥(GOOGLE_API_KEY, OPENAI_API_KEY等)
+    - 问题可以连续提问,系统会记住之前的分析历史
+    - 如果分析失败,系统会自动重试最多3次
+    """)
 
-    with col_interaction:
-        st.info("Interaction")
-        variable = st.text_input(label="Which feature do you want to analyze?")
-        exemine_btn = st.button("Exemine")
-        st.divider()
-
-        @st.cache_data
-        def explore_variable(data_file, variable):
-            data_file.seek(0)
-            dataframe = datahelper.get_dataframe(filename=data_file)
-            st.bar_chart(data=dataframe, y=[variable])
-            st.divider()
-
-            data_file.seek(0)
-            trend_response = datahelper.analyze_trend(
-                filename=loaded_file, variable=variable
-            )
-            st.success(trend_response)
-            return
-
-        if variable or exemine_btn:
-            explore_variable(data_file=loaded_file, variable=variable)
-
-        free_question = st.text_input(label="What do you want to know about dataset?")
-        ask_btn = st.button(label="Ask Question")
-        st.divider()
-
-        @st.cache_data
-        def answer_question(data_file, free_question):
-            data_file.seek(0)
-            AI_response = datahelper.ask_question(
-                filename=data_file, question=free_question
-            )
-            st.success(AI_response)
-            return
-
-        if free_question or ask_btn:
-            answer_question(data_file=loaded_file, free_question=free_question)
+# 页脚
+st.divider()
+st.caption("🤖 智能数据分析助手 | 基于LangChain和大语言模型 | 支持对话历史和自动纠错")

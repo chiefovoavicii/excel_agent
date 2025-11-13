@@ -5,7 +5,7 @@
 
 import streamlit as st
 import pandas as pd
-from enhanced_datahelper import DataAnalyzer
+from data_analyzer import DataAnalyzer
 
 # 页面配置
 st.set_page_config(page_title="智能数据分析助手 🤖", layout="wide")

@@ -4,7 +4,7 @@
 """
 
 import sys
-from enhanced_datahelper import DataAnalyzer
+from data_analyzer import DataAnalyzer
 
 
 def print_separator(char="=", length=80):
@@ -163,9 +163,9 @@ def main():
     parser.add_argument("csv_path", help="CSV文件路径")
     parser.add_argument(
         "--llm",
-        default="gemini",
+        default="qwen3",
         choices=["gemini", "gpt", "claude", "deepseek", "qwen3"],
-        help="LLM提供商 (默认: gemini)",
+        help="LLM提供商 (默认: qwen3)",
     )
     parser.add_argument("--mode", default="interactive", choices=["interactive", "batch"],
                         help="运行模式 (默认: interactive)")

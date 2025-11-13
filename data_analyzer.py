@@ -1,5 +1,5 @@
 """
-增强版数据分析助手
+数据分析助手
 支持对话历史、代码生成、错误纠正和自然语言解释
 """
 
@@ -26,7 +26,7 @@ load_dotenv()
 
 
 class DataAnalyzer:
-    """增强版数据分析器,支持对话历史和代码纠错"""
+    """数据分析器,支持对话历史和代码纠错"""
     
     def __init__(self, csv_path: str, llm_provider: str = "gemini"):
         """
@@ -241,27 +241,26 @@ class DataAnalyzer:
         
         # 构建系统提示
         system_prompt = f"""你是一个专业的Python数据分析助手。你需要生成Python代码来回答用户的数据分析问题。
+                数据集信息:
+                {self.get_dataset_info()}
 
-数据集信息:
-{self.get_dataset_info()}
+                重要规则:
+                1. 生成的代码必须是完整的、可执行的Python代码
+                2. 数据框变量名必须使用 'df'
+                3. df已经加载好了,不需要重新读取CSV
+                4. 数据已经预处理过:Sales列已转为数值(移除$和,),Rating列已转为数值(移除%)
+                5. 代码应该打印出最终结果,使用print()函数
+                6. 只返回Python代码,不要包含任何解释文字
+                7. 代码必须放在```python 和 ``` 之间
+                8. 确保代码能处理可能的NaN值
 
-重要规则:
-1. 生成的代码必须是完整的、可执行的Python代码
-2. 数据框变量名必须使用 'df'
-3. df已经加载好了,不需要重新读取CSV
-4. 数据已经预处理过:Sales列已转为数值(移除$和,),Rating列已转为数值(移除%)
-5. 代码应该打印出最终结果,使用print()函数
-6. 只返回Python代码,不要包含任何解释文字
-7. 代码必须放在```python 和 ``` 之间
-8. 确保代码能处理可能的NaN值
-
-示例代码格式:
-```python
-# 数据清理和分析代码
-result = df.groupby('Category')['Sales'].sum()
-print(result)
-```
-"""
+                示例代码格式:
+                ```python
+                # 数据清理和分析代码
+                result = df.groupby('Category')['Sales'].sum()
+                print(result)
+                ```
+                """
         
         # 如果是重试,添加错误反馈
         if attempt > 0 and self.conversation_history:
@@ -272,7 +271,7 @@ print(result)
         # 添加对话历史上下文
         if self.execution_history:
             system_prompt += "\n\n对话历史:\n"
-            for i, hist in enumerate(self.execution_history[-3:], 1):  # 只保留最近3轮
+            for i, hist in enumerate(self.execution_history[-5:], 1):  # 只保留最近5轮
                 system_prompt += f"\n问题{i}: {hist['question']}\n"
                 system_prompt += f"代码: {hist['code'][:200]}...\n"
                 system_prompt += f"结果: {hist['result'][:200]}...\n"
@@ -396,17 +395,13 @@ print(result)
         """生成自然语言解释"""
         
         prompt = f"""基于以下信息,用自然语言解释分析结果:
-
-问题: {question}
-
-执行的代码:
-{code}
-
-执行结果:
-{result}
-
-请用清晰、简洁的中文解释这个结果,回答用户的问题。不要重复代码,只需要解释结果的含义。
-"""
+                问题: {question}
+                执行的代码:
+                {code}
+                执行结果:
+                {result}
+                请用清晰、简洁的中文解释这个结果,回答用户的问题。不要重复代码,只需要解释结果的含义。
+                """
         
         messages = [
             SystemMessage(content="你是一个数据分析助手,擅长用自然语言解释数据分析结果。"),
