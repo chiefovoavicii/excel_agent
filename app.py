@@ -43,7 +43,7 @@ with st.sidebar:
     else:
         csv_path_input = st.text_input(
             "CSV文件路径:",
-            value=r"d:\ms_project\大模型实习项目测试.csv"
+            value=r"d:\ms_project\excel_agent\data\大模型实习项目测试.csv"
         )
         if csv_path_input:
             csv_path = csv_path_input

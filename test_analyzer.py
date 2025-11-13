@@ -11,7 +11,7 @@ def main():
     print("="*80)
     
     # CSV文件路径
-    csv_path = r"d:\ms_project\大模型实习项目测试.csv"
+    csv_path = r".\data\大模型实习项目测试.csv"
     
     # 测试问题(三个关联问题)
     test_questions = [

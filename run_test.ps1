@@ -26,7 +26,7 @@ else {
 }
 
 # Check test data (skip strict check due to encoding issues with Chinese characters)
-$testDataDir = "d:\ms_project"
+$testDataDir = ".\data"
 if (Test-Path $testDataDir) {
     $csvFiles = Get-ChildItem "$testDataDir\*.csv" -ErrorAction SilentlyContinue
     if ($csvFiles.Count -gt 0) {
