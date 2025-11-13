@@ -157,7 +157,7 @@ if st.session_state.data_loaded and st.session_state.analyzer:
                             st.markdown("**📈 生成的图表:**")
                             col1, col2, col3 = st.columns([1, 3, 1])
                             with col2:
-                                st.pyplot(chat["figure"], use_container_width=True)
+                                st.pyplot(chat["figure"], width='stretch')
                             import matplotlib.pyplot as plt
                             plt.close(chat["figure"])
                         

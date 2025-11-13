@@ -33,5 +33,5 @@ Write-Host ""
 Write-Host "Starting Streamlit application..." -ForegroundColor Cyan
 Write-Host ""
 
-# Start Streamlit
-streamlit run app.py
+# Start Streamlit (use python -m to avoid broken exe shims after folder rename)
+python -m streamlit run app.py

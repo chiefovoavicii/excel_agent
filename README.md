@@ -19,7 +19,13 @@ An intelligent data analysis tool powered by LangChain and LLMs that converts na
 - **Chinese Chart Support**: Matplotlib with Chinese fonts
 - **Auto Fallback**: Switches models on API quota errors
 
-## 🚀 Quick Start
+## 📷 Screenshots
+
+| Home | Analysis |
+|------|----------|
+| ![Web UI - Home](image/sc01.png) | ![Web UI - Analysis](image/sc02.png) |
+
+## � Quick Start
 
 ### Prerequisites
 
@@ -31,7 +37,7 @@ An intelligent data analysis tool powered by LangChain and LLMs that converts na
 ```bash
 # Clone repository
 git clone https://github.com/yourusername/data_analyzer_app_with_llm_agents.git
-cd data_analyzer_app_with_llm_agents-main
+cd excel_agent
 
 # Install dependencies
 pip install -r requirements.txt
@@ -58,18 +64,21 @@ python cli_analyzer.py data.csv --llm qwen3
 ## 📖 Usage Examples
 
 **Data Analysis**:
+
 ```
 Analyze sales trends of Clothing over time
 Which years did Components outsell Accessories?
 ```
 
 **Visualization**:
+
 ```
 Create a pie chart of sales by Category
 Plot Sales vs Rating scatter chart
 ```
 
 **Statistics**:
+
 ```
 Calculate average Rating by Category
 Find sales outliers

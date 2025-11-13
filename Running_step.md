@@ -15,7 +15,7 @@
 ```bash
 # 克隆仓库
 git clone https://github.com/yourusername/data_analyzer_app_with_llm_agents.git
-cd data_analyzer_app_with_llm_agents-main
+cd excel_agent
 
 # 或直接下载ZIP并解压
 ```
