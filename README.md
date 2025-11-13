@@ -41,17 +41,22 @@ QWEN_API_KEY=your_qwen_api_key_here
 ### 3️⃣ 启动应用
 
 **Web界面** (推荐):
+
 ```bash
 streamlit run enhanced_app.py
+.\start_web.ps1
 ```
+
 访问 `http://localhost:8501`
 
 **命令行工具**:
+
 ```bash
 python cli_analyzer.py --csv your_data.csv --llm qwen3
 ```
 
 **批量测试**:
+
 ```bash
 python test_analyzer.py
 ```
@@ -132,6 +137,7 @@ graph LR
 ### 自动数据清理
 
 系统自动识别并清理:
+
 - 货币格式: `$1,234.56` → `1234.56`
 - 百分比: `75%` → `75`
 - 空值处理: 自动转换为 `NaN`
@@ -181,16 +187,16 @@ headless = true
 
 ## 🐛 常见问题
 
-**Q: 网页端点击分析无响应?**  
+**Q: 网页端点击分析无响应?**
 A: 确保已加载数据,检查终端是否有异常输出;尝试更换模型。
 
-**Q: 出现402错误?**  
+**Q: 出现402错误?**
 A: 当前模型余额不足,在侧边栏切换其他模型;系统会自动尝试备用模型。
 
-**Q: 导入错误 `ModuleNotFoundError`?**  
+**Q: 导入错误 `ModuleNotFoundError`?**
 A: 运行 `pip install -r requirements.txt` 安装所有依赖。
 
-**Q: 代码生成为空?**  
+**Q: 代码生成为空?**
 A: 检查提示词长度(终端会显示DEBUG日志);尝试缩短问题或清空对话历史。
 
 ## 📄 许可证

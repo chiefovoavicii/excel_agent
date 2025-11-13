@@ -34,4 +34,4 @@ Write-Host "Starting Streamlit application..." -ForegroundColor Cyan
 Write-Host ""
 
 # Start Streamlit
-streamlit run enhanced_app.py
+streamlit run app.py

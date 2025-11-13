@@ -12,14 +12,23 @@ from typing import Dict, List, Tuple, Any, Optional
 
 import pandas as pd
 from dotenv import load_dotenv
+
+# 设置matplotlib非交互式后端，支持Streamlit环境
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# 配置中文字体显示
+plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'SimSun', 'KaiTi', 'Arial Unicode MS']
+plt.rcParams['axes.unicode_minus'] = False
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 
-# 兼容不同版本的LangChain消息类型导入路径
 try:
     from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-except Exception:  # pragma: no cover
+except Exception:
     from langchain.schema import HumanMessage, AIMessage, SystemMessage
 
 load_dotenv()
@@ -166,7 +175,8 @@ class DataAnalyzer:
             "explanation": "",
             "error": None,
             "retry_count": 0,
-            "success": False
+            "success": False,
+            "figure": None  # 新增: 保存matplotlib图形对象
         }
         
         def _format_insufficient_balance(provider: str, raw_msg: str) -> str:
@@ -207,12 +217,14 @@ class DataAnalyzer:
 
             result["code"] = code
 
-            # 执行代码
-            success, output, error = self._execute_code(code)
+            # 执行代码（返回图形对象）
+            success, output, error, fig = self._execute_code(code)
 
             if success:
                 result["execution_result"] = output
                 result["success"] = True
+                result["figure"] = fig  # 保存图形对象
+                
                 # 生成自然语言解释
                 try:
                     explanation = self._generate_explanation(question, code, output)
@@ -281,20 +293,14 @@ class DataAnalyzer:
             HumanMessage(content=f"请生成Python代码来回答以下问题:\n\n{question}")
         ]
         
-        # 调用LLM（增加调试日志，记录提示词长度）
-        prompt_length = len(system_prompt) + len(question)
-        print(f"[DEBUG] 提示词总长度: {prompt_length} 字符，正在调用 {getattr(self, 'current_provider', 'unknown')} ...")
-        
         response = self.llm.invoke(messages)
         code = response.content
-        
-        print(f"[DEBUG] LLM响应长度: {len(code) if code else 0} 字符")
         
         # 提取代码块
         code = self._extract_code(code)
 
-        # 如果模型没有返回任何代码，抛出异常以便上层捕获并显示
         if not code.strip():
+            prompt_length = len(system_prompt) + len(question)
             raise RuntimeError(
                 f"LLM未返回任何代码内容。可能原因: 提示词过长({prompt_length}字符)、配额限制或模型拒绝。"
                 f"原始响应前200字符: {response.content[:200] if response.content else '<空>'}"
@@ -350,18 +356,33 @@ class DataAnalyzer:
                 return p
         return None
 
-    def _execute_code(self, code: str) -> Tuple[bool, str, str]:
+    def _execute_code(self, code: str) -> Tuple[bool, str, str, Any]:
         """
         执行Python代码
 
         Returns:
-            (success, output, error)
+            (success, output, error, figure) - figure是matplotlib图形对象或None
         """
+        
+        # 检测是否在Streamlit环境
+        try:
+            import streamlit as st
+            is_streamlit = True
+        except ImportError:
+            st = None
+            is_streamlit = False
+        
+        # Streamlit环境下移除plt.show()，避免清空图形
+        if is_streamlit:
+            code = re.sub(r'plt\s*\.\s*show\s*\(\s*\)', '# plt.show() removed for Streamlit', code, flags=re.IGNORECASE)
+        
         # 准备执行环境
         local_vars = {
             'df': self.df.copy(),
             'pd': pd,
             'np': __import__('numpy'),
+            'plt': plt,
+            'st': st,
         }
 
         # 捕获输出
@@ -369,27 +390,29 @@ class DataAnalyzer:
         sys.stdout = captured_output = StringIO()
 
         try:
-            # 执行代码
             exec(code, local_vars)
 
-            # 获取输出
             output = captured_output.getvalue()
 
-            # 如果没有输出,尝试获取最后一个表达式的值
             if not output.strip():
-                # 检查是否有变量被创建
                 for var_name in ['result', 'output', 'answer']:
                     if var_name in local_vars:
                         output = str(local_vars[var_name])
                         break
 
             sys.stdout = old_stdout
-            return True, output, ""
+            
+            # 捕获matplotlib图形对象
+            figure = None
+            if is_streamlit and plt.get_fignums():
+                figure = plt.gcf()
+            
+            return True, output, "", figure
 
         except Exception as e:
             sys.stdout = old_stdout
             error_msg = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
-            return False, "", error_msg
+            return False, "", error_msg, None
     
     def _generate_explanation(self, question: str, code: str, result: str) -> str:
         """生成自然语言解释"""

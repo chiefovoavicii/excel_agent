@@ -11,13 +11,14 @@ def main():
     print("="*80)
     
     # CSV文件路径
-    csv_path = r"d:\ms_project\data_analyzer_app_with_llm_agents-main\大模型实习项目测试.csv"
+    csv_path = r"d:\ms_project\大模型实习项目测试.csv"
     
     # 测试问题(三个关联问题)
     test_questions = [
         "分析Clothing随时间变化的总销售额趋势",
         "对Bikes进行同样的分析", 
-        "哪些年份Components比Accessories的总销售额高?"
+        "哪些年份Components比Accessories的总销售额高?",
+        "请绘制category的总销售额柱状图"
     ]
     
     print(f"\nCSV文件: {csv_path}")

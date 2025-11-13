@@ -43,12 +43,11 @@ with st.sidebar:
     else:
         csv_path_input = st.text_input(
             "CSV文件路径:",
-            value=r"d:\ms_project\data_analyzer_app_with_llm_agents-main\大模型实习项目测试.csv"
+            value=r"d:\ms_project\大模型实习项目测试.csv"
         )
         if csv_path_input:
             csv_path = csv_path_input
     
-    # LLM选择
     st.divider()
     st.header("🤖 LLM设置")
     llm_provider = st.selectbox(
@@ -57,20 +56,17 @@ with st.sidebar:
         index=0
     )
 
-    # 如果已经初始化 analyzer 且当前 provider 与选择不同，提示用户重新初始化
     if st.session_state.get("analyzer") is not None:
         current_active = getattr(st.session_state.analyzer, "current_provider", "unknown")
         if current_active != llm_provider:
-            st.info(f"当前会话实际使用的模型: {current_active}，侧边栏已选择: {llm_provider}。点击下方按钮重新初始化以切换。")
-            if st.button("🔁 仅切换模型(保留已加载数据)", key="switch_llm_btn", help="不重新读CSV，直接替换模型"):
+            st.info(f"当前使用: {current_active}，已选择: {llm_provider}")
+            if st.button("🔁 切换模型", key="switch_llm_btn"):
                 try:
-                    # 直接替换 llm 与 current_provider
                     st.session_state.analyzer.llm = st.session_state.analyzer._init_llm(llm_provider)
-                    st.success(f"模型已切换为: {llm_provider}")
+                    st.success(f"已切换为: {llm_provider}")
                 except Exception as e:
-                    st.error(f"模型切换失败: {e}")
+                    st.error(f"切换失败: {e}")
     
-    # 加载数据按钮
     if st.button("🚀 加载数据", width='stretch'):
         if csv_path:
             try:
@@ -87,10 +83,9 @@ with st.sidebar:
         else:
             st.warning("⚠ 请先选择或输入CSV文件路径")
     
-    # 清空历史按钮
     if st.session_state.data_loaded:
         st.divider()
-    if st.button("🗑️ 清空对话历史", width='stretch'):
+        if st.button("🗑️ 清空对话历史", width='stretch'):
             st.session_state.chat_history = []
             if st.session_state.analyzer:
                 st.session_state.analyzer.clear_history()
@@ -158,18 +153,22 @@ if st.session_state.data_loaded and st.session_state.analyzer:
                         st.markdown("**💡 分析解释:**")
                         st.info(chat["explanation"])
                         
+                        if chat.get("figure") is not None:
+                            st.markdown("**📈 生成的图表:**")
+                            col1, col2, col3 = st.columns([1, 3, 1])
+                            with col2:
+                                st.pyplot(chat["figure"], use_container_width=True)
+                            import matplotlib.pyplot as plt
+                            plt.close(chat["figure"])
+                        
                         if chat.get("retry_count", 0) > 0:
                             st.caption(f"ℹ️ 经过 {chat['retry_count'] + 1} 次尝试后成功")
                     else:
                         st.error("❌ 分析失败")
                         explanation_text = chat.get("explanation", "未知错误")
                         st.error(explanation_text)
-                        # 如果是余额/配额不足错误,给出引导
                         if any(k in explanation_text for k in ["余额", "402", "quota", "配额"]):
-                            st.warning(
-                                "检测到当前模型可能余额或配额不足。您可以在侧边栏更换其它可用的 LLM 提供商后重新尝试。\n"
-                                "已设置的密钥将自动生效。若仍失败，请检查对应平台账户状态。"
-                            )
+                            st.warning("检测到余额或配额不足，请在侧边栏更换其它LLM提供商。")
                         if chat.get("code"):
                             with st.expander("尝试的代码"):
                                 st.code(chat["code"], language="python")
@@ -196,16 +195,13 @@ if st.session_state.data_loaded and st.session_state.analyzer:
             analyzer.clear_history()
             st.rerun()
         
-        # 处理用户问题
         if submit_btn and user_question.strip():
             with st.spinner("🤔 正在分析..."):
                 try:
-                    # 生成代码并执行
                     result = analyzer.generate_code(user_question)
                 except Exception as e:
-                    # 捕获未处理的异常，避免页面无输出
                     import traceback
-                    err_text = f"LLM调用或代码生成过程中发生异常: {e}\n{traceback.format_exc()[:800]}"
+                    err_text = f"代码生成异常: {e}\n{traceback.format_exc()[:800]}"
                     result = {
                         "question": user_question,
                         "success": False,
@@ -215,18 +211,17 @@ if st.session_state.data_loaded and st.session_state.analyzer:
                         "error": str(e),
                         "retry_count": 0
                     }
-                # 若生成的代码为空但没有显式错误，做保护性处理
+                
                 if result.get("success") and not result.get("code", "").strip():
                     result["success"] = False
-                    result["explanation"] = "生成成功标记出现但代码为空，已标记为失败。请重试或缩短问题。"
-                # 附加调试信息（仅在失败且 explanation 中无余额关键词时显示简短来源）
+                    result["explanation"] = "代码为空，请重试或缩短问题。"
+                
                 if not result.get("success") and "current_provider" in getattr(analyzer, '__dict__', {}):
                     provider = getattr(analyzer, 'current_provider', 'unknown')
                     if "LLM调用失败" in result.get("explanation", "") and "provider=" not in result["explanation"]:
                         result["explanation"] += f"\n(provider={provider})"
-                # 添加到聊天历史
+                
                 st.session_state.chat_history.append(result)
-                # 刷新页面
                 st.rerun()
 
 else:
