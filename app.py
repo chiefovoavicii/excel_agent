@@ -8,11 +8,11 @@ import pandas as pd
 from data_analyzer import DataAnalyzer
 
 # 页面配置
-st.set_page_config(page_title="智能数据分析助手 🤖", layout="wide")
+st.set_page_config(page_title="智能表格数据分析Agent 🤖", layout="wide")
 
 # 标题
-st.title("🤖 智能数据分析助手 (增强版)")
-st.markdown("支持对话历史、自动代码生成、错误纠正和自然语言解释")
+st.title("🤖 智能表格数据分析Agent ")
+st.markdown("支持对话历史、自动代码生成、图表绘制、错误纠正和自然语言解释")
 st.divider()
 
 # 初始化session state
@@ -52,7 +52,7 @@ with st.sidebar:
     st.header("🤖 LLM设置")
     llm_provider = st.selectbox(
         "选择LLM:",
-        ["gemini", "gpt", "claude", "deepseek", "qwen3"],
+        ["qwen3","gemini", "gpt", "claude", "deepseek"],
         index=0
     )
 
@@ -251,6 +251,7 @@ else:
     - 分析Clothing随时间变化的总销售额趋势
     - 对Bikes进行同样的分析
     - 哪些年份Components比Accessories的总销售额高?
+    - 请绘制出不同Category的销售额扇形图，并分析原因
     - 找出销售额最高的产品类别
     - 分析评分和销售额之间的关系
     
@@ -262,4 +263,4 @@ else:
 
 # 页脚
 st.divider()
-st.caption("🤖 智能数据分析助手 | 基于LangChain和大语言模型 | 支持对话历史和自动纠错")
+st.caption("🤖 智能表格数据分析Agent | 基于LangChain和大语言模型 | 支持对话历史和自动纠错")
